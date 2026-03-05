@@ -48,7 +48,7 @@ resource "aws_lambda_function" "hom_analyze" {
 
   environment {
     variables = {
-      MODEL_ID                = "deepseek.v3.2"
+      MODEL_ID                = var.bedrock_model_id
       PROCESSOR_FUNCTION_NAME = aws_lambda_function.hom_analyze_processor.function_name
     }
   }
@@ -76,7 +76,7 @@ resource "aws_lambda_function" "hom_analyze_processor" {
 # IAM ROLES AND POLICIES FOR EACH LAMBDA
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "terminal_finder_exec" {
-  name = "terminal_finder_lambda_role_${random_pet.bucket_suffix.id}"
+  name = "tf-role-${substr(random_pet.bucket_suffix.id, 0, 8)}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -91,7 +91,7 @@ resource "aws_iam_role" "terminal_finder_exec" {
 }
 
 resource "aws_iam_policy" "terminal_finder_policy" {
-  name        = "terminal_finder_lambda_policy_${random_pet.bucket_suffix.id}"
+  name        = "tf-policy-${substr(random_pet.bucket_suffix.id, 0, 8)}"
   description = "Least-privilege policy for terminal_finder_lambda"
 
   policy = jsonencode({
@@ -106,18 +106,11 @@ resource "aws_iam_policy" "terminal_finder_policy" {
       },
       {
         Action = [
-          "logs:CreateLogGroup"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-      {
-        Action = [
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/terminal_finder_lambda:*"
+        Resource = "${aws_cloudwatch_log_group.terminal_finder.arn}:*"
       }
     ]
   })
@@ -129,7 +122,7 @@ resource "aws_iam_role_policy_attachment" "terminal_finder_policy_attach" {
 }
 
 resource "aws_iam_role" "hom_analyze_exec" {
-  name = "hom_analyze_lambda_role_${random_pet.bucket_suffix.id}"
+  name = "ha-role-${substr(random_pet.bucket_suffix.id, 0, 8)}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -144,7 +137,7 @@ resource "aws_iam_role" "hom_analyze_exec" {
 }
 
 resource "aws_iam_policy" "hom_analyze_policy" {
-  name        = "hom_analyze_lambda_policy_${random_pet.bucket_suffix.id}"
+  name        = "ha-policy-${substr(random_pet.bucket_suffix.id, 0, 8)}"
   description = "Least-privilege policy for hom_analyze_lambda"
 
   policy = jsonencode({
@@ -155,7 +148,7 @@ resource "aws_iam_policy" "hom_analyze_policy" {
           "bedrock:InvokeModel"
         ]
         Effect   = "Allow"
-        Resource = "*"
+        Resource = "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}"
       },
       {
         Action = [
@@ -166,18 +159,11 @@ resource "aws_iam_policy" "hom_analyze_policy" {
       },
       {
         Action = [
-          "logs:CreateLogGroup"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-      {
-        Action = [
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/hom_analyze_lambda:*"
+        Resource = "${aws_cloudwatch_log_group.hom_analyze.arn}:*"
       }
     ]
   })
@@ -189,7 +175,7 @@ resource "aws_iam_role_policy_attachment" "hom_analyze_policy_attach" {
 }
 
 resource "aws_iam_role" "hom_analyze_processor_exec" {
-  name = "hom_analyze_processor_lambda_role_${random_pet.bucket_suffix.id}"
+  name = "hap-role-${substr(random_pet.bucket_suffix.id, 0, 8)}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -204,7 +190,7 @@ resource "aws_iam_role" "hom_analyze_processor_exec" {
 }
 
 resource "aws_iam_policy" "hom_analyze_processor_policy" {
-  name        = "hom_analyze_processor_lambda_policy_${random_pet.bucket_suffix.id}"
+  name        = "hap-policy-${substr(random_pet.bucket_suffix.id, 0, 8)}"
   description = "Least-privilege policy for hom_analyze_processor_lambda"
 
   policy = jsonencode({
@@ -212,18 +198,11 @@ resource "aws_iam_policy" "hom_analyze_processor_policy" {
     Statement = [
       {
         Action = [
-          "logs:CreateLogGroup"
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      },
-      {
-        Action = [
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/hom_analyze_processor_lambda:*"
+        Resource = "${aws_cloudwatch_log_group.hom_analyze_processor.arn}:*"
       }
     ]
   })
@@ -232,4 +211,19 @@ resource "aws_iam_policy" "hom_analyze_processor_policy" {
 resource "aws_iam_role_policy_attachment" "hom_analyze_processor_policy_attach" {
   role       = aws_iam_role.hom_analyze_processor_exec.name
   policy_arn = aws_iam_policy.hom_analyze_processor_policy.arn
+}
+
+resource "aws_cloudwatch_log_group" "terminal_finder" {
+  name              = "/aws/lambda/terminal_finder_lambda"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "hom_analyze" {
+  name              = "/aws/lambda/hom_analyze_lambda"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "hom_analyze_processor" {
+  name              = "/aws/lambda/hom_analyze_processor_lambda"
+  retention_in_days = 14
 }

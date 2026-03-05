@@ -15,3 +15,9 @@ variable "slack_bot_token" {
   type        = string
   sensitive   = true
 }
+
+variable "bedrock_model_id" {
+  description = "Bedrock model ID used by analyze lambda"
+  type        = string
+  default     = "deepseek.v3.2"
+}

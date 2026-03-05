@@ -163,3 +163,37 @@ terraform destroy
 
 - Não comite tokens, `*.tfvars` ou state local.
 - O `.terraform.lock.hcl` deve ficar versionado para garantir versões de providers consistentes.
+
+## Exemplo de policy IAM (Lambda `hom_analyze`)
+
+Exemplo de permissões mínimas (substitua `<ACCOUNT_ID>` pelo valor da sua conta):
+
+```json
+{
+  "Statement": [
+    {
+      "Action": [
+        "bedrock:InvokeModel"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:bedrock:us-east-1::foundation-model/deepseek.v3.2"
+    },
+    {
+      "Action": [
+        "lambda:InvokeFunction"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:lambda:us-east-1:<ACCOUNT_ID>:function:hom_analyze_processor_lambda"
+    },
+    {
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:logs:us-east-1:<ACCOUNT_ID>:log-group:/aws/lambda/hom_analyze_lambda:*"
+    }
+  ],
+  "Version": "2012-10-17"
+}
+```
