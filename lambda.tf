@@ -22,7 +22,7 @@ data "archive_file" "analyze_processor_lambda_zip" {
 resource "aws_lambda_function" "terminal_finder" {
   filename      = data.archive_file.lambda_zip.output_path
   function_name = "terminal_finder_lambda"
-  role          = aws_iam_role.lambda_exec.arn
+  role          = aws_iam_role.terminal_finder_exec.arn
   handler       = "index.handler"
   runtime       = "python3.9"
 
@@ -39,7 +39,7 @@ resource "aws_lambda_function" "terminal_finder" {
 resource "aws_lambda_function" "hom_analyze" {
   filename      = data.archive_file.analyze_lambda_zip.output_path
   function_name = "hom_analyze_lambda"
-  role          = aws_iam_role.lambda_exec.arn
+  role          = aws_iam_role.hom_analyze_exec.arn
   handler       = "analyze.handler"
   runtime       = "python3.9"
   timeout       = 30
@@ -57,7 +57,7 @@ resource "aws_lambda_function" "hom_analyze" {
 resource "aws_lambda_function" "hom_analyze_processor" {
   filename      = data.archive_file.analyze_processor_lambda_zip.output_path
   function_name = "hom_analyze_processor_lambda"
-  role          = aws_iam_role.lambda_exec.arn
+  role          = aws_iam_role.hom_analyze_processor_exec.arn
   handler       = "analyze_processor.handler"
   runtime       = "python3.9"
   timeout       = 30
@@ -73,10 +73,10 @@ resource "aws_lambda_function" "hom_analyze_processor" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# IAM ROLE AND POLICY FOR LAMBDA
+# IAM ROLES AND POLICIES FOR EACH LAMBDA
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_role" "lambda_exec" {
-  name = "serverless_lambda_role_${random_pet.bucket_suffix.id}"
+resource "aws_iam_role" "terminal_finder_exec" {
+  name = "terminal_finder_lambda_role_${random_pet.bucket_suffix.id}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -90,9 +90,9 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-resource "aws_iam_policy" "lambda_s3_policy" {
-  name        = "lambda_s3_policy_${random_pet.bucket_suffix.id}"
-  description = "IAM policy for Lambda to read from S3 and invoke Bedrock"
+resource "aws_iam_policy" "terminal_finder_policy" {
+  name        = "terminal_finder_lambda_policy_${random_pet.bucket_suffix.id}"
+  description = "Least-privilege policy for terminal_finder_lambda"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -102,8 +102,54 @@ resource "aws_iam_policy" "lambda_s3_policy" {
           "s3:GetObject"
         ]
         Effect   = "Allow"
-        Resource = "${aws_s3_bucket.data_bucket.arn}/*"
+        Resource = "${aws_s3_bucket.data_bucket.arn}/${aws_s3_object.data_file.key}"
       },
+      {
+        Action = [
+          "logs:CreateLogGroup"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+      {
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/terminal_finder_lambda:*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "terminal_finder_policy_attach" {
+  role       = aws_iam_role.terminal_finder_exec.name
+  policy_arn = aws_iam_policy.terminal_finder_policy.arn
+}
+
+resource "aws_iam_role" "hom_analyze_exec" {
+  name = "hom_analyze_lambda_role_${random_pet.bucket_suffix.id}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_policy" "hom_analyze_policy" {
+  name        = "hom_analyze_lambda_policy_${random_pet.bucket_suffix.id}"
+  description = "Least-privilege policy for hom_analyze_lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       {
         Action = [
           "bedrock:InvokeModel"
@@ -116,22 +162,74 @@ resource "aws_iam_policy" "lambda_s3_policy" {
           "lambda:InvokeFunction"
         ]
         Effect   = "Allow"
+        Resource = aws_lambda_function.hom_analyze_processor.arn
+      },
+      {
+        Action = [
+          "logs:CreateLogGroup"
+        ]
+        Effect   = "Allow"
         Resource = "*"
       },
       {
         Action = [
-          "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/hom_analyze_lambda:*"
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_s3_attach" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = aws_iam_policy.lambda_s3_policy.arn
+resource "aws_iam_role_policy_attachment" "hom_analyze_policy_attach" {
+  role       = aws_iam_role.hom_analyze_exec.name
+  policy_arn = aws_iam_policy.hom_analyze_policy.arn
+}
+
+resource "aws_iam_role" "hom_analyze_processor_exec" {
+  name = "hom_analyze_processor_lambda_role_${random_pet.bucket_suffix.id}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_policy" "hom_analyze_processor_policy" {
+  name        = "hom_analyze_processor_lambda_policy_${random_pet.bucket_suffix.id}"
+  description = "Least-privilege policy for hom_analyze_processor_lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+      {
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/lambda/hom_analyze_processor_lambda:*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "hom_analyze_processor_policy_attach" {
+  role       = aws_iam_role.hom_analyze_processor_exec.name
+  policy_arn = aws_iam_policy.hom_analyze_processor_policy.arn
 }
