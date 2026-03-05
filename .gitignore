@@ -1,0 +1,31 @@
+# Terraform local state and cache
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terragrunt cache
+.terragrunt-cache/
+
+# Terraform variable files (usually sensitive/local)
+*.tfvars
+*.tfvars.json
+
+# Lambda/package build artifacts
+lambda/*.zip
+__pycache__/
+*.pyc
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

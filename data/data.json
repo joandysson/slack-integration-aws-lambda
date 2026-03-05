@@ -1,0 +1,30 @@
+[
+    {
+        "terminal": "190ebae8-d485-4cac-a3b2-3b7d423ed37a",
+        "value": "50",
+        "description": "Terminal 1",
+        "location": "Sao Paulo",
+        "address": "Rua 1, 123"
+    },
+    {
+        "terminal": "e3fac632-baef-417d-9af1-daab360dac25",
+        "value": "100",
+        "description": "Terminal 2",
+        "location": "Rio de Janeiro",
+        "address": "Rua 2, 123"
+    },
+    {
+        "terminal": "85dcccb5-e035-405e-9b9d-ed4d779d3a1d",
+        "value": "150",
+        "description": "Terminal 3",
+        "location": "Belo Horizonte",
+        "address": "Rua 3, 123"
+    },
+    {
+        "terminal": "a1e874c1-7702-45e3-aca7-696ef888764e",
+        "value": "200",
+        "description": "Terminal 4",
+        "location": "Curitiba",
+        "address": "Rua 4, 123"
+    }
+]
